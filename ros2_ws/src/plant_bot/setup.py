@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Yoldaki Mühendisler - Rota Takipli Otonom Sulama Aracı
 # Bu kod Aras Coşkun - github.com/arascoskun0 tarafından yapılmıştır.
 
@@ -16,6 +17,8 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
         (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'urdf'), glob('urdf/*')),
+        (os.path.join('share', package_name, 'worlds'), glob('worlds/*')),
     ],
     install_requires=['setuptools', 'rclpy', 'requests'],
     zip_safe=True,

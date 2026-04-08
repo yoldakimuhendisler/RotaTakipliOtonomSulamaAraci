@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 # Yoldaki Mühendisler - Rota Takipli Otonom Sulama Aracı
 # Bu kod Aras Coşkun - github.com/arascoskun0 tarafından yapılmıştır.
 

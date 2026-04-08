@@ -1,6 +1,6 @@
 # Yoldaki Mühendisler - Rota Takipli Otonom Sulama Aracı 🌿
 
-Bu kod bütünü **Aras Coşkun - [github.com/arascoskun0](https://github.com/arascoskun0)** tarafından oluşturulmuştur.
+Bu kod bütünü **Aras Coşkun - [github.com/arascoskun0](https://github.com/arascoskun0)** tarafından oluşturulmuştur. (sanırsam Zeynep çalışmadığı için tüm değişiklikleride Aras Coşkun yapacak.)
 
 Bu proje **"Yoldaki Mühendisler"** takımı için otonom bir bitki sulama ağının kurulmasını sağlamak amacıyla geliştirilmiştir. Otonom kara aracı (Raspberry Pi 5 + ROS 2), Wi-Fi ağı üzerinden yapay zeka bilgisayarıyla *(AI Inference Server)* iletişim kurarak hareket eder, bitkileri tanır ve nem seviyelerine göre otonom olarak mekanik bir propla toprağı sulayıp sulamamaya karar verir. 
 
@@ -14,7 +14,57 @@ Bu proje **"Yoldaki Mühendisler"** takımı için otonom bir bitki sulama ağı
 
 ---
 
-## 🚀 Çalıştırma ve Kurulum (Takım İçin Rehber)
+## 🔧 Donanım Kurulumu ve Pin Bağlantıları
+
+Bu proje Raspberry Pi 5 üzerine kuruludur. Aşağıdaki sensör ve motor sürücülerin ilgili pinlere bağlanması gerekmektedir.
+
+### Kullanılan Donanımların Listesi (Donanım BOM)
+1. **Motor Sürcü:** L298N Motor Sürücü Kartı (Sağ ve sol DC tekerlek motorları için)
+2. **Kamera:** Standart USB Web Kamerası veya Pi Camera Module 3
+3. **Nem Sensörü:** Capacitive Soil Moisture Sensor v1.2 (Analog sensördür, dijital çevirici gereklidir)
+4. **ADC Çevirici:** MCP3008 SPI ADC Entegresi (Nem sensörünü RPi'ye bağlamak için)
+5. **Prob Mekanizması:** MG996R Servo Motor (Nem sensörünü mekanik olarak toprağa daldırıp çıkarmak için)
+6. **Su Pompası:** 5V Dalgıç Su Pompası ve 1-Kanal 5V Röle Kartı (Suyu bitkiye aktarmak için)
+
+### GPIO Pin Bağlantı Şeması (Raspberry Pi 5)
+
+Sistemin bütünlüğünü korumak adına RPi 5 (Broadcom GPIO) pin konfigürasyonları aşağıdaki gibi tespit edilmiştir:
+
+| Bileşen | RPi 5 Pin (BCM / GPIO) | RPi 5 Fiziksel Pin No | Açıklama |
+|---|---|---|---|
+| **L298N ENA (Sol Hız)** | GPIO 12 (PWM0) | Pin 32 | Sol motorların PWM hız kontrolü |
+| **L298N IN1 & IN2** | GPIO 5, GPIO 6 | Pin 29, Pin 31 | Sol motor yönü (İleri/Geri) |
+| **L298N IN3 & IN4** | GPIO 13, GPIO 19 | Pin 33, Pin 35 | Sağ motor yönü (İleri/Geri) |
+| **L298N ENB (Sağ Hız)**| GPIO 18 (PWM1) | Pin 12 | Sağ motorların PWM hız kontrolü |
+| **Servo (Prob İndir)** | GPIO 26 | Pin 37 | Probu aşağı/yukarı hareket ettiren servo sinyali |
+| **Röle (Su Pompası)** | GPIO 21 | Pin 40 | Su pompasını tetikleyen High/Low pini |
+
+#### MCP3008 (Analog/Dijital Dönüştürücü) Toprak Sensörü Bağlantıları
+Kapasitif sensör analog voltaj okuması verdiğinden, SPI üzerinden MCP3008'e bağlanmıştır.
+
+| MCP3008 Pin | RPi 5 Pin / Diğer Yön |
+|---|---|
+| VDD & VREF | RPi 3.3V (Örn: Pin 1) |
+| AGND & DGND | RPi GND (Ortak Toprak, Örn: Pin 6) |
+| CLK | GPIO 11 (Pin 23) (SCLK) |
+| DOUT | GPIO 9 (Pin 21) (MISO) |
+| DIN | GPIO 10 (Pin 19) (MOSI) |
+| CS/SHDN | GPIO 8 (Pin 24) (CE0) |
+| CH0 | Nem Sensörü Analog Veri Kablosu (AOUT) |
+
+*Not: Nem sensörünün VCC'si 3.3V'a ve GND'si ortak GND'ye bağlanmalıdır.*
+
+### 🛠️ Sensör ve Mekanik Kurulum Adımları
+1. L298N motor sürücüye bataryalarınızdan (örn. 11.1V LiPo veya 12V pil bloğu) direkt güç verin, 5V dönüşümünü açın ve L298N GND eksenini RPi'nin GND ekseniyle **mutlaka birleştirin**.
+2. Sağ ve sol motorların artı eksi kutuplarını L298N çıkışlarına bağlayın. ENA, ENB, IN1, IN2, IN3, IN4 pinlerini RPi'ye tabloda yazdığı şekilde jumper kablolar ile girin.
+3. Servo motor ve Röleyi RPi dışındaki harici bir 5V kaynağından (regülatör) beslemeniz önerilir (RPi 5 akımı yetmeyebilir). Sadece sinyal (Data/PWM) kablolarını (GPIO 26 ve GPIO 21) RPi'ye takın.
+4. MCP3008 entegresini breadboard'a saplayın ve tüm SPI jumperlarını (MOSI, MISO, SCLK, CE0) Raspberry Pi üzerine takın.
+5. Capacitive Soil Moisture Sensor'ı MG996R Servonun koluna yapııştırın veya plastik cırtla bağlayın, sensör ucunu aşağı sarkıtın. Data ucunu breadboarda CH0'a girin. Pompaya su borusunu bağlayın ve ucunu robotun ön kısmından toprağa yönlendirin.
+6. Kamerayı RPi'nin USB portlarından birine takarak öne bakacak şekilde araca sabitleyin.
+
+---
+
+## 🚀 Yazılım Kurulumu ve Çalıştırma (Takım İçin Rehber)
 
 Proje iki donanım cihazı arasında bölüştürülmüş durumdadır: **1. AI Sunucusu (Geliştirici PC'si)** ve **2. Raspberry Pi 5 (Araç Kontrolcüsü).** Donanımların entegrasyonlarını test ederken `.sim_mode` kullanarak araba üzerinde hiçbir elektronik takılı olmadan kodları test etme / geliştirme lüksüne sahibiz.
 
