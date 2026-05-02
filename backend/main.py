@@ -2,6 +2,7 @@
 # Bu kod Aras Coşkun - github.com/arascoskun0 tarafından yapılmıştır.
 
 from fastapi import FastAPI, Depends, WebSocket
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import asyncio
@@ -27,9 +28,9 @@ app = FastAPI(title="Otonom Bitki Sulama Aracı Backend API")
 
 active_connections = []
 
-@app.get("/")
-def read_root():
-    return {"status": "ok", "message": "Backend Server is Running"}
+import os
+
+# app.mount will be at the bottom to avoid shadowing api routes
 
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry(websocket: WebSocket):
@@ -77,3 +78,11 @@ def create_plant(plant: PlantCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_plant)
     return {"id": db_plant.id, "status": "created"}
+
+# Mount the static files for the React Dashboard
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+else:
+    logger.warning("Static directory not found! Dashboard won't be served.")
+

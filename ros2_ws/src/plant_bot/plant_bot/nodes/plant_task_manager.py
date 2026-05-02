@@ -11,6 +11,7 @@ class PlantTaskManager(Node):
     def __init__(self):
         super().__init__('plant_task_manager')
         self.state = "SEARCHING"
+        self.state_start_time = time.time()
         self.subscription_ai = self.create_subscription(String, 'ai/detections', self.ai_callback, 10)
         
         self.probe_cmd_pub = self.create_publisher(String, 'soil_probe/command', 10)
@@ -22,48 +23,65 @@ class PlantTaskManager(Node):
         self.target_found = False
         self.moisture_val = None
 
+    def change_state(self, new_state):
+        self.state = new_state
+        self.state_start_time = time.time()
+
     def ai_callback(self, msg: String):
-        if self.state == "SEARCHING":
-            if "Plant" in msg.data and "success\": true" in msg.data.lower():
-                self.target_found = True
-                self.get_logger().info("Bitki tespit edildi! Durum: APPROACHING")
-                self.state = "APPROACHING"
+        try:
+            if self.state == "SEARCHING":
+                if "Plant" in msg.data and "success\": true" in msg.data.lower():
+                    self.target_found = True
+                    self.get_logger().info("Bitki tespit edildi! Durum: APPROACHING")
+                    self.change_state("APPROACHING")
+        except Exception as e:
+            self.get_logger().error(f"AI Callback hatasi: {e}")
 
     def moisture_callback(self, msg: Float32):
-        if self.state == "MEASURING":
-            self.moisture_val = msg.data
-            self.get_logger().info(f"Nem okundu: {self.moisture_val}%")
-            if self.moisture_val < 40.0:
-                self.get_logger().info("Nem yetersiz (<%40), sulama yapilacak.")
-                self.state = "WATERING"
-            else:
-                self.get_logger().info("Nem yeterli, sulama yapilmayacak. Sonraki hedefe geciliyor.")
-                self.state = "SEARCHING"
-                self.target_found = False
+        try:
+            if self.state == "MEASURING":
+                self.moisture_val = msg.data
+                self.get_logger().info(f"Nem okundu: {self.moisture_val}%")
+                if self.moisture_val < 40.0:
+                    self.get_logger().info("Nem yetersiz (<%40), sulama yapilacak.")
+                    self.change_state("WATERING")
+                    
+                    # Sulama komutunu gonder
+                    msg_water = Float32()
+                    msg_water.data = 3.0 # 3 saniye sula
+                    self.water_cmd_pub.publish(msg_water)
+                else:
+                    self.get_logger().info("Nem yeterli, sulama yapilmayacak. Sonraki hedefe geciliyor.")
+                    self.target_found = False
+                    self.change_state("SEARCHING")
+        except Exception as e:
+            self.get_logger().error(f"Nem Callback hatasi: {e}")
 
     def state_machine_loop(self):
-        if self.state == "APPROACHING":
-            self.get_logger().info("Hedefe yaklaşılıyor...")
-            # Sahte gecikme (Gercekte goal_reached event'ini bekler)
-            time.sleep(2)
-            self.state = "MEASURING"
-            
-            self.get_logger().info("Nem ölçme komutu gönderiliyor.")
-            msg = String()
-            msg.data = "MEASURE"
-            self.probe_cmd_pub.publish(msg)
-            
-        elif self.state == "WATERING":
-            self.get_logger().info("Sulama komutu gönderiliyor...")
-            msg = Float32()
-            msg.data = 3.0 # 3 saniye sula
-            self.water_cmd_pub.publish(msg)
-            
-            # Sulamanin bitmesini bekle
-            time.sleep(5) 
-            self.state = "SEARCHING"
-            self.target_found = False
-            self.get_logger().info("Sulama bitti. Tekrar arayisa cikildi.")
+        try:
+            current_time = time.time()
+            elapsed = current_time - self.state_start_time
+
+            if self.state == "APPROACHING":
+                if elapsed < 2.0:
+                    # Sadece bir kere yazdir
+                    if elapsed < 1.0:
+                        self.get_logger().info("Hedefe yaklaşılıyor...")
+                else:
+                    self.change_state("MEASURING")
+                    self.get_logger().info("Nem ölçme komutu gönderiliyor.")
+                    msg = String()
+                    msg.data = "MEASURE"
+                    self.probe_cmd_pub.publish(msg)
+                
+            elif self.state == "WATERING":
+                if elapsed > 5.0:
+                    self.target_found = False
+                    self.get_logger().info("Sulama bitti. Tekrar arayisa cikildi.")
+                    self.change_state("SEARCHING")
+                    
+        except Exception as e:
+            self.get_logger().error(f"State Machine hatasi: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

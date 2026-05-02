@@ -21,10 +21,17 @@ class WateringNode(Node):
         self.get_logger().info("Sulama Pompasi Nodu baslatildi.")
 
     def cmd_callback(self, msg: Float32):
-        sec = msg.data
-        self.get_logger().info(f"{sec} saniyelik sulama komutu alindi.")
-        self.pump.run_pump(sec)
-        self.get_logger().info("Sulama islemi bitti.")
+        try:
+            sec = msg.data
+            if sec <= 0:
+                self.get_logger().warning("Gecersiz sulama suresi (<=0) alindi, islem iptal ediliyor.")
+                return
+            
+            self.get_logger().info(f"{sec} saniyelik sulama komutu alindi.")
+            self.pump.run_pump(sec)
+            self.get_logger().info("Sulama islemi basariyla bitti.")
+        except Exception as e:
+            self.get_logger().error(f"Sulama isleminde kritik hata: {e}")
 
 def main(args=None):
     rclpy.init(args=args)

@@ -10,11 +10,25 @@
   <!-- Three.js for 3D RPi Model -->
   <script src="js/lib/three.min.js"></script>
   <script src="js/lib/STLLoader.js"></script>
+  <script src="js/lib/GLTFLoader.js"></script>
   
   <style>
-    body { font-family: 'Inter', sans-serif; background: #0f172a; color: white; overflow: hidden;}
+    body { 
+        font-family: 'Inter', sans-serif; 
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+        color: white; 
+        overflow: hidden;
+    }
+    .bg-grid {
+        position: absolute;
+        inset: 0;
+        background-size: 40px 40px;
+        background-image: linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),
+                          linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px);
+        z-index: 0;
+    }
     .glass {
-      background: rgba(30, 41, 59, 0.7);
+      background: rgba(30, 41, 59, 0.4);
       backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.05);
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
@@ -32,10 +46,15 @@
     }
   </style>
 </head>
-<body class="h-screen w-screen flex flex-col items-center justify-center p-8 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+<body class="h-screen w-screen flex flex-col items-center justify-center p-8 relative">
+  <div class="bg-grid"></div>
+  
+  <!-- Glow orbs -->
+  <div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-sky-500/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
+  <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[100px] rounded-full pointer-events-none z-0"></div>
 
   <!-- Wi-Fi Alert Modal -->
-  <div id="wifi-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 " style="display: none;">
+  <div id="wifi-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 backdrop-blur-md" style="display: none;">
     <div class="glass flex flex-col items-center justify-center p-10 rounded-2xl max-w-lg text-center transform scale-100 border-red-500/50 border">
       <div class="text-red-500 mb-4">
         <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-20 h-20 mx-auto">
@@ -55,13 +74,13 @@
       <h1 class="text-3xl font-bold neon-text">Yönetim Merkezi</h1>
       <p class="text-slate-400">Yoldaki Mühendisler Otonom Araç Ağı</p>
     </div>
-    <div class="flex items-center space-x-3 bg-slate-800 px-5 py-2 rounded-full border border-slate-700">
-      <div id="wifi-dot" class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse"></div>
-      <span id="wifi-text" class="text-sm font-semibold tracking-wide">Ağ Aranıyor...</span>
+    <div class="flex items-center space-x-3 bg-slate-800/80 backdrop-blur-sm px-6 py-2.5 rounded-full border border-slate-700/80 shadow-[0_0_15px_rgba(0,0,0,0.5)] z-10">
+      <div id="wifi-dot" class="w-3 h-3 rounded-full bg-yellow-500 animate-pulse shadow-[0_0_10px_#eab308]"></div>
+      <span id="wifi-text" class="text-sm font-bold tracking-widest uppercase">Ağ Aranıyor...</span>
     </div>
   </header>
 
-  <main class="w-full max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-6 h-full min-h-0">
+  <main class="w-full max-w-7xl grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-0 z-10">
     
     <!-- AI SERVER CARD -->
     <div class="glass status-off rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between" id="card-ai">
