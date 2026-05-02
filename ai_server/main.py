@@ -13,12 +13,20 @@ if str(root_dir) not in sys.path:
 
 from shared.models.common import AIInferenceResponse
 from shared.utils.logger import get_logger
+from shared.utils.env_checker import is_sim_mode
 from ai_server.providers.dummy_provider import DummyProvider
+from ai_server.providers.yolo_provider import YoloProvider
 
 logger = get_logger("AIServer")
 app = FastAPI(title="Otonom Bitki Sulama AI Inference Server")
 
-provider = DummyProvider()
+if is_sim_mode():
+    logger.info("Simulasyon Modu: DummyProvider kullanilacak.")
+    provider = DummyProvider()
+else:
+    logger.info("Donanim Modu: Gercek YoloProvider kullanilacak.")
+    provider = YoloProvider()
+
 provider.load_model()
 
 @app.get("/health")

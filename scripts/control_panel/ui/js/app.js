@@ -116,36 +116,56 @@ function init3RpiModel() {
     scene.add(dirLight2);
 
     // -----------------------------------------------------------------
-    // Build the Pi Group (Only STL)
+    // Build the Pi Group (GLTF First, fallback to STL)
     // -----------------------------------------------------------------
     const piGroup = new THREE.Group();
     scene.add(piGroup);
     camera.lookAt(piGroup.position);
 
+    const gltfLoader = new THREE.GLTFLoader();
     const stlLoader = new THREE.STLLoader();
 
-    stlLoader.load('assets/rpi5.stl', function (geometry) {
-        // Material details
-        const material = new THREE.MeshStandardMaterial({ color: 0x166534, metalness: 0.2, roughness: 0.5 });
-        const mesh = new THREE.Mesh(geometry, material);
+    // Check for GLTF first (best for colors)
+    gltfLoader.load('assets/rpi5.glb', function (gltf) {
+        // Auto scale for GLTF
+        const box = new THREE.Box3().setFromObject(gltf.scene);
+        const size = box.getSize(new THREE.Vector3()).length();
+        const center = box.getCenter(new THREE.Vector3());
         
-        // Otomatik Ortalama ve Boyutlandırma (Görünmezliği önler)
-        geometry.computeBoundingBox();
-        const bbox = geometry.boundingBox;
-        const size = new THREE.Vector3();
-        bbox.getSize(size);
+        gltf.scene.position.x += (gltf.scene.position.x - center.x);
+        gltf.scene.position.y += (gltf.scene.position.y - center.y);
+        gltf.scene.position.z += (gltf.scene.position.z - center.z);
         
-        const maxDim = Math.max(size.x, size.y, size.z);
-        if (maxDim > 0) {
-             const scale = 4.0 / maxDim; // Hedef genişlik (yaklaşık 4 birim)
-             mesh.scale.set(scale, scale, scale);
-        }
+        const scale = 4.0 / size;
+        gltf.scene.scale.set(scale, scale, scale);
         
-        geometry.center(); // Merkeze al
-        piGroup.add(mesh);
+        piGroup.add(gltf.scene);
         
-    }, undefined, function(err) {
-        console.error("rpi5.stl yüklenirken hata oluştu! Dosyanın assets/rpi5.stl konumunda olduğundan emin olun.");
+    }, undefined, function (error) {
+        // GLTF bulunamazsa STL deneyelim:
+        stlLoader.load('assets/rpi5.stl', function (geometry) {
+            // Material details
+            const material = new THREE.MeshStandardMaterial({ color: 0x166534, metalness: 0.2, roughness: 0.5 });
+            const mesh = new THREE.Mesh(geometry, material);
+            
+            // Otomatik Ortalama ve Boyutlandırma (Görünmezliği önler)
+            geometry.computeBoundingBox();
+            const bbox = geometry.boundingBox;
+            const size = new THREE.Vector3();
+            bbox.getSize(size);
+            
+            const maxDim = Math.max(size.x, size.y, size.z);
+            if (maxDim > 0) {
+                 const scale = 4.0 / maxDim; // Hedef genişlik (yaklaşık 4 birim)
+                 mesh.scale.set(scale, scale, scale);
+            }
+            
+            geometry.center(); // Merkeze al
+            piGroup.add(mesh);
+            
+        }, undefined, function(err) {
+            console.error("3D model yüklenirken hata oluştu! Dosyanın assets/rpi5.glb veya rpi5.stl konumunda olduğundan emin olun.");
+        });
     });
 
 
