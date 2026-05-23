@@ -32,6 +32,11 @@ import os
 
 # app.mount will be at the bottom to avoid shadowing api routes
 
+class LogCreate(BaseModel):
+    level: str
+    module: str
+    message: str
+
 @app.websocket("/ws/telemetry")
 async def websocket_telemetry(websocket: WebSocket):
     await websocket.accept()
@@ -47,7 +52,11 @@ async def websocket_telemetry(websocket: WebSocket):
 @app.post("/api/telemetry")
 async def post_telemetry(data: TelemetryData):
     """ROS 2 veya arabadan gelen telemetri datasını Web'e Broadcast eder."""
-    msg = data.json()
+    import json
+    d = data.dict()
+    d["type"] = "telemetry"
+    msg = json.dumps(d)
+    
     disconnected = []
     for connection in active_connections:
         try:
@@ -77,7 +86,60 @@ def create_plant(plant: PlantCreate, db: Session = Depends(get_db)):
     db.add(db_plant)
     db.commit()
     db.refresh(db_plant)
+    
+    # Veritabanına yeni bitki eklenince de websocket üzerinden bildirebiliriz:
+    import json
+    plant_msg = json.dumps({
+        "type": "new_plant",
+        "plant": {"id": db_plant.id, "location_x": db_plant.location_x, "location_y": db_plant.location_y, "species": db_plant.species}
+    })
+    for connection in active_connections:
+        try:
+            asyncio.create_task(connection.send_text(plant_msg))
+        except Exception:
+            pass
+            
     return {"id": db_plant.id, "status": "created"}
+
+@app.post("/api/logs")
+def create_log(log_data: LogCreate, db: Session = Depends(get_db)):
+    from datetime import datetime
+    db_log = schema.SystemLog(
+        level=log_data.level,
+        module=log_data.module,
+        message=log_data.message
+    )
+    db.add(db_log)
+    db.commit()
+    db.refresh(db_log)
+    
+    # Websocket ile log bilgisini de gönder
+    import json
+    log_msg = json.dumps({
+        "type": "log",
+        "timestamp": db_log.timestamp.isoformat() if db_log.timestamp else datetime.utcnow().isoformat(),
+        "level": db_log.level,
+        "module": db_log.module,
+        "message": db_log.message
+    })
+    for connection in active_connections:
+        try:
+            asyncio.create_task(connection.send_text(log_msg))
+        except Exception:
+            pass
+            
+    return {"id": db_log.id, "status": "created"}
+
+@app.get("/api/logs")
+def get_logs(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    logs = db.query(schema.SystemLog).order_by(schema.SystemLog.timestamp.desc()).offset(skip).limit(limit).all()
+    return [{
+        "id": l.id,
+        "timestamp": l.timestamp.isoformat() if l.timestamp else None,
+        "level": l.level,
+        "module": l.module,
+        "message": l.message
+    } for l in reversed(logs)]
 
 # Mount the static files for the React Dashboard
 static_dir = os.path.join(os.path.dirname(__file__), "static")
@@ -85,4 +147,5 @@ if os.path.exists(static_dir):
     app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 else:
     logger.warning("Static directory not found! Dashboard won't be served.")
+
 
