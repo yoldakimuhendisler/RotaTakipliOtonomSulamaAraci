@@ -1,10 +1,12 @@
 # Yoldaki Mühendisler - Rota Takipli Otonom Sulama Aracı 🌿
 
 ------- LİNK KISMI -------
+
 [Ana Repository](https://arascoskun.dev/shortlinks/ymrtosagithub)
 
 [Ayna Repository](https://arascoskun.dev/shortlinks/ymrtosaarasgitea)
-------- LİNK KISMI -------
+
+------- LİMK KISMI -------
 
 Bu kod bütünü **Aras Coşkun - [github.com/arascoskun0](https://github.com/arascoskun0)** tarafından oluşturulmuştur.
 
