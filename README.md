@@ -1,13 +1,5 @@
 # Yoldaki Mühendisler - Rota Takipli Otonom Sulama Aracı 🌿
 
-------- LİNK KISMI -------
-
-[Ana Repository](https://arascoskun.dev/shortlinks/ymrtosagithub)
-
-[Ayna Repository](https://arascoskun.dev/shortlinks/ymrtosaarasgitea)
-
-------- LİMK KISMI -------
-
 Bu kod bütünü **Aras Coşkun - [github.com/arascoskun0](https://github.com/arascoskun0)** tarafından oluşturulmuştur.
 
 Bu proje **"Yoldaki Mühendisler"** takımı için otonom bir bitki sulama ağının kurulmasını sağlamak amacıyla geliştirilmiştir. Otonom kara aracı (Raspberry Pi 5 + ROS 2), Wi-Fi ağı üzerinden yapay zeka bilgisayarıyla *(AI Inference Server)* iletişim kurarak hareket eder, bitkileri tanır ve nem seviyelerine göre otonom olarak mekanik bir propla toprağı sulayıp sulamamaya karar verir. 
